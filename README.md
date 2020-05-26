@@ -1,5 +1,7 @@
 # Folders - Folds as Code
 
+**Note: This is not an officially supported Google product.**
+
 Folders is a library that uses *product bifunctors* to define generic,
 *delimited* folds and unfolds. In addition to providing predefined folds,
 Folders defines a number of generic functions that empower you to define folds
