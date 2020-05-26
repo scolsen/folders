@@ -1,0 +1,173 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(doc Consumers "
+  Defines 'consumers'--functions that deconstruct a list into a product of two
+  components. Consumers are used to abstract common
+  pattern-matching/destructuring patterns against lists and may be used to define
+  traversals (see the `Traversals` module). They separate the consumption of a
+  structure from operations on its decomposed parts, enabling greater
+  flexibility.
+
+  Consumers may be conveniently illustrated using simple diagrams. In the
+  diagram below, `(. . . . .)` represents an input list of elements, `l`
+  signifies the left component of the resulting product, and `r` signifies the
+  right component. A `[----]` indicates an extension of the component's
+  contents, and usually maps to a `cdr` on a list:
+
+  ```
+  (. . . . .)
+   ^ ^[-----]
+   l r
+  ```
+
+  These diagrams are employed throughout to display the shape of the consumer's
+  result (the diagram above illustrates the product produced by the `each`
+  consumer. When used to define traversals, consumers are called recursively.
+  Understanding the shape of their products can make it easire to reason about
+  their deconstruction of a list over a series of recursive calls.")
+(defmodule Consumers
+  (hidden deconstruct)
+  (private deconstruct)
+  ;; A safe deconstruction.
+  ;; Calling `car` or `cdr` recklessly can lead to runtime errors.
+  ;; So, we perform a simple length check before calling these functions.
+  ;; Note that plain old `car` and `cdr`  are usually not problematic since
+  ;; callers will check whether a list is empty or not before destructuring, but the
+  ;; rest of the `cxr` family can result in runtime errors even if the initial list
+  ;; has values.
+  (defndynamic deconstruct [n else f]
+    (fn [xs]
+      (if (< (length xs) n)
+          else
+          (f xs))))
+
+  ;; "safe" versions of cdr, cadr, etc.
+  (hidden cdr?)
+  (private cdr?)
+  (defndynamic cdr? [xs]
+    (let [f (Folders.Consumers.deconstruct 1 '() cdr)] 
+      (f xs)))
+  (hidden cddr?)
+  (private cddr?)
+  (defndynamic cddr? [xs]
+    (let [f (Folders.Consumers.deconstruct 2 '() cddr)]
+      (f xs)))
+  (hidden car?)
+  (private car?)
+  (defndynamic car? [n xs x]
+    (let [f (Folders.Consumers.deconstruct 1 x car)]
+      (f xs)))
+  (hidden cadr?)
+  (private cadr?)
+  (defndynamic cadr? [n xs x]
+    (let [f (Folders.Consumers.deconstruct 1 x car)]
+      (f xs)))
+
+  (doc each "
+    The classic list deconstruction, returns a product containing two values,
+    the head and tail of `xs`.
+
+    Given a list:
+    ```
+    (. . . . .)
+     ^ ^[-----]
+     l r
+    ```")
+  (defndynamic each [xs]
+    (Folders.Product.fork car cdr xs))
+ 
+  (doc every-other "
+    Applies a function to every other member of a structure.
+
+    Given a list:
+    ```
+    (. . . . .)
+       ^ ^[---]
+       l r
+    ```")
+  (defndynamic every-other [xs]
+    (Folders.Product.fork cadr Folders.Consumers.cddr? xs))
+
+  (doc head "
+    Deconstructs a list into a product containing its head and the empty list,
+    short-circuiting the traversal immediately.
+    
+    Given a list:
+    ```
+    (. . . . .) ()
+     ^          ^
+     l          r
+    ```")
+  (defndynamic head [xs]
+    (Folders.Product.fork car (Folders.Prelude.const '()) xs))
+
+  (doc tail "
+    Deconstructs a list into a product containing its tail and the empty list,
+    short-circuting the traversal immediately.
+
+    Given a list:
+    ```
+    (. . . . .) ()
+       ^[-----] ^ 
+       l        r
+    ```")
+  (defndynamic tail [xs]
+    (Folders.Product.fork cdr (Folders.Prelude.const '()) xs))
+
+  (doc tails "
+    Deconstructs a list into a product containing its tail in both positions.
+
+    Given a list:
+    ```
+    (. . . . .)
+       ^[-----]
+       lr
+    ```")
+  (defndynamic tails [xs]
+    (Folders.Product.fork cdr cdr xs))
+  
+  (doc id "
+    Returns a product containing `xs` in both positions.
+
+    Given a list:
+    ```
+    (. . . . .)
+    ^[--------]
+    lr
+    ```")
+  (defndynamic id [xs]
+    (Folders.Product.fork Folders.Prelude.id Folders.Prelude.id xs))
+
+  (doc head-idr "
+    Deconstructs a list into a product containing its head and the original input list.
+
+    Given a list:
+    ```
+    (. . . . .)
+    [^--------]
+    ^^
+    r^
+     l
+    ```")
+  (defndynamic head-idr [xs]
+    (Folders.Product.fork car Folders.Prelude.id xs))
+
+  (defndynamic lift-l [f]
+    (fn [x y]
+      (f (list x) y)))
+  (defndynamic lift-r [f]
+    (fn [x y]
+      (f x (list y))))
+)

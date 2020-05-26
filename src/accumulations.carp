@@ -1,0 +1,60 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(doc Accumulations "
+  Defines 'accumulations'--functions that construct a list using a product of
+  two components and a list-constructing operation (e.g. cons).
+
+  The products defined by an accumulation should have:
+ 
+  - A left component that defines how to produce the next element of the list.
+  - A right component that defines how to destruct the previously computed list.")
+(defmodule Accumulations
+  (doc accumulate "
+    Defines accumulations of values as a list structure by levaraging products
+    to yield subsequent list elements.")
+  (defndynamic accumulate [f t b]
+    (fn [s r]
+      (let [m (Folders.Product.merge b)]
+        (if (empty? s)
+            (Folders.Product.product (m (Folders.Product.product r s)) r)
+            (let [l (m (Folders.Product.map-l (curry f r) (t s)))]
+              (Folders.Product.product l r))))))
+
+  (doc series "
+    Generates a series of values by repeatedly applying a monoidal operation
+    to the previously computed value and a constant.
+
+    ```
+    (unfold (series +) 0 1 5)
+    => (0 1 2 3 4 5)
+    ```")
+  (defndynamic series [m]
+    (Folders.Accumulations.accumulate m Folders.Consumers.head-idr cons))
+
+  (doc repeat "
+    Generates a repeated sequence of a constant seed value.
+
+    ```
+    (unfold repeat '() 1 5)
+    => (1 1 1 1 1)
+    ```")
+  (defdynamic repeat
+    (Folders.Accumulations.accumulate Folders.Prelude.first Folders.Consumers.head-idr cons-last))
+
+  ;;(doc scan-form
+  ;;  "Generates a sequence of cons forms")
+  ;;(defdynamic scan-form
+  ;;  (Folders.Generators.generate (fn [x y] (append x (list y))) Folders.Producers.sequence))
+)

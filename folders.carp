@@ -1,0 +1,99 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(doc Folders "
+  Folders defines machinery for defining folds generically, using either
+  traversals over existing lists or accumulations to produce new lists.
+  ")
+(defmodule Folders
+  (load "src/prelude.carp")
+  (load "src/product.carp")
+  (load "src/consumers.carp")
+  (load "src/traversals.carp")
+  (load "src/accumulations.carp")
+
+  (doc folder
+    "Generic machinery for producing folds.
+     The basic idea is to 'factor out' recursion, by passing primitive
+     functions that take two inputs, a seed value and a recursive step.
+
+     These functions should alter the seed and recursive step as needed,
+     returning a product containing the next seed and next recursion for the
+     next call. A variety of functions that meet these requirements are
+     defined in the Folders.Recursions module.
+
+     The 'traversal' primitive is roughly equivalent to what one typically
+     means by 'morphism' insofar as its recursion is defined by a *list* and it is
+     higher order (requires a function and maps over list values).")
+  (defndynamic folder [recursion seed step limit counter]
+    (let [next (recursion seed step)
+          tick (+ 1 counter)]
+    (if (= counter limit)
+      seed
+      (Folders.folder recursion (Folders.Product.left next) (Folders.Product.right next) limit tick))))
+
+  (doc fold "
+    Defines a 'fold' by succesively applying the given `traversal` on `step`
+    which must be a list.
+
+    The given traversal is first applied to `seed` and subsequently to the
+    result of the previous application, up until `limit` is reached. 
+
+    The `traversal` dictates how the given `source` is deconstructed and how
+    reduced values are combined.
+
+    ```
+    (fold sum '(1 2 3 4) 4)
+    => 10
+    ```")
+  (defndynamic fold [traversal seed source limit]
+    (if (not (list? source))
+        seed ;; macro-error?
+        (Folders.folder traversal seed source limit 0)))
+
+  (doc unfold "
+    Defines an unfold using a given `accumulation`, `seed` value and `step`. 
+
+    If the given `seed` is not a list, `unfold` will wrap the value in a `list`
+    before accumulating values.  The provided `accumulation` dictates how results
+    are collected and merged.
+   
+    Typically, values are collected in reverse order.
+ 
+    ```
+    (unfold (series +) 0 1 10)
+    => (10 9 8 7 6 5 4 3 2 1 0) 
+    ```")
+  (defndynamic unfold [accumulation seed step limit]
+    (if (not (list? seed))
+        (Folders.folder accumulation (list seed) step limit 0)
+        (Folders.folder accumulation seed step limit 0)))
+
+  (doc refold "
+    An unfold given by `accumulation`, `seed-g` and `limit-g` and `step`,
+    followed by a fold given by `traversal`, `seed-t`, and `limit-t`.
+
+    Reverses the results of the unfold before applying the fold.
+
+    ```
+    ;; generate the first 10 natural numbers, then sum the first four.
+    (refold (series +) 0 1 10 (combine +) 0 4)
+    => 
+    ```")
+  (defndynamic refold [accumulation seed-g step limit-g traversal seed-t limit-t]
+    (Folders.fold traversal seed-t (reverse (Folders.unfold accumulation seed-g step limit-g)) limit-t))
+
+  (load "src/folds.carp")
+  (load "src/unfolds.carp")
+)
