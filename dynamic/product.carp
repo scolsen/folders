@@ -1,0 +1,121 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(defmodule Dynamic
+  (defmodule Folders
+    (defmodule Product
+
+      (defndynamic product [s r]
+        (array s r))
+
+      (defndynamic left [p]
+        (car p))
+
+      (defndynamic right [p]
+        (cadr p))
+
+      (defndynamic fork [f g x]
+        (Dynamic.Folders.Product.product (f x) (g x)))
+
+      (defndynamic merge [m]
+        (fn [p]
+          (m (Dynamic.Folders.Product.left p)
+             (Dynamic.Folders.Product.right p))))
+
+      (defndynamic map [f g p]
+        (let [lf (fn [p-] (f (Dynamic.Folders.Product.left p-)))
+              rg (fn [p-] (g (Dynamic.Folders.Product.right p-)))]
+          (Dynamic.Folders.Product.fork lf rg p)))
+
+      (defndynamic map-l [f p]
+        (Dynamic.Folders.Product.map f Dynamic.Folders.Prelude.id p))
+
+      (defndynamic map-r [f p]
+        (Dynamic.Folders.Product.map Dynamic.Folders.Prelude.id f p))
+    )
+  )
+)
+
+(doc Dynamic.Folders.Product
+"A dynamic representation of the Product bifunctor.")
+
+(doc Dynamic.Folders.Product.product "
+Takes two valuies, `s` and `r`, into a dynamic product of left and right components.
+
+```
+(product 1 2)
+=> [1 2]
+``` ")
+
+(doc Dynamic.Folders.Product.left "
+Returns the left component of a product, `p`.
+
+```
+(left (product 1 2))
+=> 1
+```
+")
+
+(doc Dynamic.Folders.Product.right "
+Returns the right component of a product, `p`.
+
+```
+(right (product 1 2))
+=> 2
+```
+")
+
+(doc Dynamic.Folders.Product.fork "
+Takes a value, `x`, to a product by calling functions `f` and `g` on `x`
+to yield left and right components.
+
+```
+(fork inc dec 2)
+=> [3 1]
+```")
+
+(doc Dynamic.Folders.Product.merge "
+Defines a monoid over product components; combines the left and right
+components of a product `p` using `m` to yield a single value.
+
+```
+((merge +) (product 1 2))
+=> 3
+```")
+
+(doc Dynamic.Folders.Product.map "
+Maps two functions `f` and `g` over the left and right components of a product `p`.
+
+```
+(map inc dec (product 1 2))
+=> [2 1]
+```")
+
+(doc Dynamic.Folders.Product.map-l "
+Maps a function `f` over the left component of a product `p`.
+
+```
+(map-l inc (product 1 2))
+=> [2 2]
+```
+")
+
+(doc Dynamic.Folders.Product.map-r "
+Maps a function `f` over the right componenet of a product `p`.
+
+```
+(map-r (product 1 2))
+=> [1 3]
+```
+")

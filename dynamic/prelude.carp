@@ -1,0 +1,75 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(defmodule Dynamic
+  (defmodule Folders
+    (defmodule Prelude
+
+      (defndynamic id [x] x)
+
+      (defndynamic first [x y] x)
+
+      (defndynamic second [x y] y)
+
+     (defndynamic const [x]
+       (fn [y] x))
+
+     (defndynamic filter [p]
+       (fn [x y]
+         (if (p y)
+             (append x (list y))
+             x)))
+    )
+  )
+)
+
+(doc Dynamic.Folders.Prelude "
+A collection of useful generic functions called throughout the rest of the
+Folders library.")
+
+(doc Dynamic.Folders.Prelude.id "
+The identity function; returns its argument.
+
+```
+(id 'foo)
+=> foo
+(id 2)
+=> 2
+```")
+
+(doc Dynamic.Folders.Prelude.first "
+A binary function that returns its first argument, `x`.
+
+```
+(first 1 2)
+=> 1
+```
+")
+
+(doc Dynamic.Folders.Prelude.second "
+A binary function that returns its second argument,`y`.
+
+```
+(second 1 2)
+=> 2
+```
+")
+
+(doc Dynamic.Folders.Prelude.const "
+Returns a unary function that returns the constant value `x`.
+
+```
+((const 2) 3)
+=> 2
+```")

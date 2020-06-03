@@ -1,0 +1,77 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(load-once "dynamic/product.carp")
+(load-once "dynamic/consumers.carp")
+
+(defmodule Dynamic
+  (defmodule Folders
+    (defmodule Accumulations
+      (use Dynamic.Folders.Consumers)
+      (use Dynamic.Folders.Product)
+
+      (defndynamic accumulate [f t b]
+        (fn [s r]
+          (let [m (merge b)]
+            (if (empty? s)
+                (product (m (product r s)) r)
+                (let [l (m (map-l (curry f r) (t s)))]
+                  (product l r))))))
+
+      (defndynamic series [m]
+        (Folders.Accumulations.accumulate m
+          Dynamic.Folders.Consumers.head-idr cons))
+
+      (defdynamic repeat
+        (Folders.Accumulations.accumulate
+          Dynamic.Folders.Prelude.first
+            Dynamic.Folders.Consumers.head-idr cons-last))
+
+      ;;(doc scan-form
+      ;;  "Generates a sequence of cons forms")
+      ;;(defdynamic scan-form
+      ;;  (Folders.Generators.generate (fn [x y] (append x (list y))) Folders.Producers.sequence))
+    )
+  )
+)
+
+(doc Dynamic.Folders.Accumulations "
+Defines 'accumulations'--functions that construct a list using a product of
+two components and a list-constructing operation (e.g. cons).
+
+The products defined by an accumulation should have:
+
+- A left component that defines how to produce the next element of the list.
+- A right component that defines how to destruct the previously computed list.")
+
+(doc Dynamic.Folders.Accumulations.accumulate "
+Defines accumulations of values as a list structure by levaraging products
+to yield subsequent list elements.")
+
+(doc Dynamic.Folders.Accumulations.series "
+Generates a series of values by repeatedly applying a monoidal operation
+to the previously computed value and a constant.
+
+```
+(unfold (series +) 0 1 5)
+=> (0 1 2 3 4 5)
+```")
+
+(doc Dynamic.Folders.Accumulations.repeat "
+Generates a repeated sequence of a constant seed value.
+
+```
+(unfold repeat '() 1 5)
+=> (1 1 1 1 1)
+```")
