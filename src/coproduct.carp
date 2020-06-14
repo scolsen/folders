@@ -1,0 +1,42 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(doc Coproduct "
+  Defines an alternative between two types, `q` and `z`")
+;; type var names here are necessary to avaoid a unification error
+(deftype (Coproduct q z) (Left [q]) (Right [z]))
+
+(defmodule Coproduct
+  (doc right
+    "Takes two types to a Coproduct, returning the right value.")
+  (defn right [x y] (Coproduct.Right y))
+
+  (doc left
+    "Takes two types to a Coproduct, returning the left value.")
+  (defn left [x y] (Coproduct.Left x))
+
+  (doc join
+    "If the given Coproduct `cp` is a `Left`, applies `f` to the `cp`'s value;
+     if `cp` is a `Right`, applies `g` to the `cp's` value.")
+  (defn join [f g cp]
+    (match cp (Coproduct.Left x) (~f x)
+              (Coproduct.Right y) (~g y)))
+
+  (doc map
+    "Maps two functions `f` and `g` over a Coproduct, yielding a new coproduct.")
+  (defn map [f g cp]
+    (let [l (fn [x] (Coproduct.left (~f x) (zero)))
+          r (fn [y] (Coproduct.right (zero) (~g y)))]
+      (join &l &r cp)))
+)

@@ -1,0 +1,43 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(definterface head (Fn [(f a)] a))
+(definterface tail (Fn [(f a)] (Coproduct (f a) (Empty (f a)))))
+(definterface member (Fn [(f a)] (Product a (f a))))
+;;(definterface next (Fn [(f a)] (Product (f a) (f a))))
+
+(defmodule Folders
+  (defmodule Foldable
+    (defn out- [cp] (Coproduct.join &id &Empty.from-empty cp))
+
+    (defn each [xs]
+      (Product.map-r &Folders.Foldable.out- (Product.fork &head &tail xs)))
+
+    (defn every-other [xs]
+      (Product.map-r &Folders.Foldable.out-
+        (Product.fork &(fn [x] (head (tail x))) &(fn [x] (tail (tail x))) xs)))
+
+    (defn first [xs]
+      (Product.fork &head &empty xs))
+
+    (defn rest [xs]
+      (Product.fork &tail &empty xs))
+
+    (defn last [xs]
+      (let [result (Folders.Foldable.out- @(Product.left &(rest xs)))
+            result* &result]
+      (while (not (empty? @result*))
+        (set! result (Folders.Foldable.out- @(Product.left &(rest @result*)))))))
+  )
+)

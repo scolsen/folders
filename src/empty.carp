@@ -1,0 +1,41 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(doc Empty
+  "The type of empty containers.
+  Empty is used to distinguish the empty case of a container type in generic
+  traversals--it is necessary as the fully generic type `(f a)` is also a
+  suitable implementation of `id` and Empty must be used to disambiguate
+  interface dispatch under certain contexts.")
+(deftype (Empty (f a)) (Of [(f a)]))
+
+(doc empty
+  "Returns the empty container of some container type `(f a)`")
+(definterface empty (Fn [(f a)] (Empty (f a))))
+
+(doc empty?
+  "Returns true if this value corresponds to the `Empty` type of `(f a)`")
+(definterface empty? (Fn [(f a)] Bool))
+
+(defmodule Empty
+  (implements zero zero)
+  (defn zero []
+    (Empty.Of (zero)))
+
+  (doc from-empty
+    "Extracts a value from an `Empty`.")
+  (defn from-empty [e]
+    (match e
+      (Empty.Of x) x))
+)

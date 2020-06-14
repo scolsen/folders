@@ -1,0 +1,71 @@
+;; Copyright 2020 Google LLC
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License");
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;  https://www.apache.org/licenses/LICENSE-2.0
+;;
+;;  Unless required by applicable law or agreed to in writing, software
+;;  distributed under the License is distributed on an "AS IS" BASIS,
+;;  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;;  See the License for the specific language governing permissions and
+;;  limitations under the License.
+
+(doc Product "
+  The Product of two types, `a` and `b`")
+(deftype (Product a b) [left a right b])
+
+(defmodule Product
+  (doc fork "
+    Fork takes a value `x` into a product by applying `f` to `x` to yield the
+    left component of the Product, and `g` to `x` to yield the right component.")
+  (sig fork (Fn [(Ref (Fn [a] b)) (Ref (Fn [a] c)) a] (Product b c)))
+  (defn fork [f g x]
+    (let [y @&x
+          l (~f x)
+          r (~g y)]
+    (Product.init l r)))
+
+  (doc map "
+    Maps two functions, `f` and `g` over the left and right components of a
+    Product `p` to yield a new Product.")
+  (sig map
+    (Fn [(Ref (Fn [a] c)) (Ref (Fn [b] d)) (Product a b)] (Product c d)))
+  (defn map [f g p]
+    (let [lf (fn [x] (~f @(Product.left &x)))
+          rf (fn [x] (~g @(Product.right &x)))]
+      (Product.fork &lf &rf p)))
+
+  (doc endo-map "
+    Maps two functions `f` and `g` over the components of a Product `p` in place.
+    See `map` for a non-mutating variant of this function.")
+  (sig endo-map
+    (Fn [(Ref (Fn [a] c)) (Ref (Fn [b] d)) (Product a b)] (Product c d)))
+  (defn endo-map [f g p]
+    (let-do [l (~f @(Product.left &p))
+             r (~g @(Product.right &p))]
+      (Product.set-left! &p l)
+      (Product.set-right! &p r)
+      p))
+
+  (doc map-l "
+    Maps a function `f` over the left component of a Product `p`.")
+  (sig map-l (Fn [(Ref (Fn [a] b)) (Product a c)] (Product b c)))
+  (defn map-l [f p]
+    (Product.map f &id p))
+
+  (doc map-l "
+    Maps a function `f` over the right component of a Product `p`.")
+  (sig map-r (Fn [(Ref (Fn [a] b)) (Product c a)] (Product c b)))
+  (defn map-r [f p]
+    (Product.map &id f p))
+
+  (doc merge "
+    Combines the left and right component of a Product `p` using a binary
+    function `m`.")
+  (sig merge (Fn [(Ref (Fn [a b] c))] (Fn [(Ref (Product a b))] c)))
+  (defn merge [m]
+    (fn [p]
+      (~m @(Product.left p) @(Product.right p))))
+)

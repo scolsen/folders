@@ -18,6 +18,22 @@
 (load-once "dynamic/traversals.carp")
 (load-once "dynamic/accumulations.carp")
 
+(load-once "src/product.carp")
+(load-once "src/coproduct.carp")
+(load-once "src/empty.carp")
+(load-once "src/foldable.carp")
+(load-once "src/traversal.carp")
+
+(defmodule Folders
+  (defn folder [recursion seed step limit counter]
+    (let [next &(recursion seed step)
+          tick (+ 1 counter)]
+    (if (= counter limit)
+      seed
+      (folder recursion @(Product.left next)
+        @(Product.right next) limit tick))))
+)
+
 (defmodule Dynamic
   (defmodule Folders
     (defndynamic folder [recursion seed step limit counter]
